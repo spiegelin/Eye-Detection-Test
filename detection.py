@@ -16,24 +16,19 @@ if face_cascade.empty() or eye_cascade.empty():
     print("Error al cargar clasificadores Haar.")
     exit()
 
-# Define los rangos de color en formato HSV para clasificar los colores de ojos.
-# Se utiliza un diccionario para organizar los rangos de cada color.
-color_ranges = {
-    'Marrones': ((0,   50,  50), (25, 255, 100)),
-    'Verdes':   ((20,  50,  50), (30, 255, 150)),
-    'Azules':   ((31,  50,  50), (130,255, 255))
-}
-
 def classify_color(bgr_color):
     """
     Convierte un color BGR a HSV y clasifica el color del iris según una lógica
     basada en el valor (V) y el tono (H).
-
+    
+    Este método usa el espacio de color HSV para determinar el color basado en:
+      - El tono (H) y la saturación (S).
+      - El valor (V), que indica la luminosidad o intensidad del color.
+    
     Se asume que:
       - Para tonos con H < 10 se consideran Marrones.
       - Para 10 <= H < 25:
-          • Si V >= 150 se clasifica como Azules (sugiere que, pese a un H bajo,
-            el iris es brillante, típico en ojos azules en nuestros tests).
+          • Si V >= 150 se clasifica como Azules.
           • Si V < 140 se clasifica como Marrones.
           • Valores intermedios se asignan como Verdes.
       - Para 25 <= H < 40:
@@ -44,39 +39,34 @@ def classify_color(bgr_color):
     
     Args:
         bgr_color (tuple): Color en formato BGR.
-
+    
     Returns:
         str: "Marrones", "Verdes", "Azules" o "Indeterminado".
     """
+    # Convierte el color BGR a HSV para facilitar la clasificación.
     hsv = cv2.cvtColor(np.uint8([[[bgr_color[0], bgr_color[1], bgr_color[2]]]]),
                        cv2.COLOR_BGR2HSV)[0][0]
     h, s, v = hsv
 
-    if 47 <= s <= 83:
-        print(f"{hsv}: Verdes")
-        return "Verdes"
+    # Clasificación de ojos marrones si el tono (H) es muy bajo.
     if h < 10:
-        print(f"{hsv}: Marrones")
         return "Marrones"
+    # Clasificación de ojos azules o marrones con tonos intermedios.
     elif 10 <= h < 25:
         if v >= 150:
-            print(f"{hsv}: Azules")
             return "Azules"
         elif v < 140:
-            print(f"{hsv}: Marrones")
             return "Marrones"
         else:
-            print(f"{hsv}: Verdes")
             return "Verdes"
+    # Clasificación de ojos azules o verdes según el valor de (V).
     elif 25 <= h < 40:
         if v >= 120:
-            print(f"{hsv}: Azules")
             return "Azules"
         else:
-            print(f"{hsv}: Verdes")
             return "Verdes"
+    # Clasificación de ojos azules en tonos más elevados de (H).
     elif 40 <= h < 100:
-        print(f"{hsv}: Azules")
         return "Azules"
     else:
         return "Indeterminado"
