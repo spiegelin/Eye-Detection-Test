@@ -37,14 +37,15 @@ def classify_color(bgr_color):
     # Convierte el color BGR a HSV para facilitar la comparación.
     hsv = cv2.cvtColor(np.uint8([[[bgr_color[0], bgr_color[1], bgr_color[2]]]]),
                        cv2.COLOR_BGR2HSV)[0][0]
-    # Imprime el valor HSV para fines de depuración.
-    print(hsv)
 
     # Recorre cada rango definido y verifica si el color se encuentra dentro de los límites.
     for name, (lower, upper) in color_ranges.items():
         if lower[0] <= hsv[0] <= upper[0] and lower[1] <= hsv[1] <= upper[1] and lower[2] <= hsv[2] <= upper[2]:
+            print(f"{hsv} : {name}")
             return name
     # Retorna "Indeterminado" si el color no coincide con ninguno de los rangos.
+    # Imprime el valor HSV para fines de depuración.
+    print(f"{hsv} : Indeterminado")
     return "Indeterminado"
 
 while True:
