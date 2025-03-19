@@ -90,6 +90,3 @@ Press 'q' to exit the video stream.
 ## License
 
 This project is licensed under the MIT License.
-```
-
-Feel free to modify or expand the README to better suit your needs!
