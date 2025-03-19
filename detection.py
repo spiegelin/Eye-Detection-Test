@@ -7,56 +7,30 @@ if not cap.isOpened():
     print("No se pudo abrir la cámara.")
     exit()
 
-# Cargar clasificadores Haar
+# Cargar clasificadores Haar para rostro y ojos
 face_cascade = cv2.CascadeClassifier('./haarcascade_frontalface_default.xml')
 eye_cascade  = cv2.CascadeClassifier('./haarcascade_eye.xml')
-
 if face_cascade.empty() or eye_cascade.empty():
     print("Error al cargar clasificadores Haar.")
     exit()
 
-# Rango HSV aproximado para colores de ojos
+# Definir rangos HSV para los 4 colores de ojos
 color_ranges = {
-    'Marrones': ((0,   50,  50), (20, 255, 255)),
-    'Avellana': ((20,  50,  50), (30, 255, 255)),
-    'Verdes':   ((30,  50,  50), (85, 255, 255)),
-    'Azules':   ((90,  50,  50), (130,255, 255)),
-    'Grises':   ((0,    0,  50), (180, 50, 200))
+    'Marrones': ((0,   50,  50), (25, 255, 100)),
+    'Verdes':   ((20,  50,  50), (30, 255, 150)),
+    'Azules':   ((31,  50,  50), (130,255, 255))
 }
 
 def classify_color(bgr_color):
-    """Convierte un color BGR a HSV y lo compara con los rangos de color."""
-    hsv = cv2.cvtColor(np.uint8([[[bgr_color[0], bgr_color[1], bgr_color[2]]]]),
+    """Convierte BGR a HSV y clasifica según los rangos definidos."""
+    hsv = cv2.cvtColor(np.uint8([[[bgr_color[0], bgr_color[1], bgr_color[2]]]]), 
                        cv2.COLOR_BGR2HSV)[0][0]
     hue, sat, val = hsv
     print(hsv)
-
-    # Caso especial: grises => saturación baja, valor intermedio
-    if sat < 50 and 50 <= val <= 200:
-        return "Grises"
-
-    # Compara con el resto de rangos
     for name, (lower, upper) in color_ranges.items():
-        if (lower[0] <= hue <= upper[0] and
-            lower[1] <= sat <= upper[1] and
-            lower[2] <= val <= upper[2]):
-
+        if lower[0] <= hue <= upper[0] and lower[1] <= sat <= upper[1] and lower[2] <= val <= upper[2]:
             return name
     return "Indeterminado"
-
-def classify_iris_color(bgr_color):
-    """Convierte un color BGR a HSV y lo compara con los rangos de color."""
-    hsv = cv2.cvtColor(np.uint8([[[bgr_color[0], bgr_color[1], bgr_color[2]]]]),
-                       cv2.COLOR_BGR2HSV)[0][0]
-    hue, sat, val = hsv
-    print(hsv)
-    if hue < 2 or sat < 150 or val < 120:
-        return "cafe"
-    if hue <= 3 or 150 <= sat <= 180 or 120 <= val <= 170:
-        return "verde"        
-    else:
-        return "azul"
-
 
 while True:
     ret, frame = cap.read()
@@ -66,87 +40,62 @@ while True:
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, 1.3, 5, minSize=(80,80))
-
+    
     for (x, y, w, h) in faces:
-        # Dibuja la cara
+        # Dibuja el rectángulo del rostro
         cv2.rectangle(frame, (x, y), (x+w, y+h), (255,0,0), 2)
-        roi_gray  = gray[y:y+h, x:x+w]
-        roi_color = frame[y:y+h, x:x+w]
-
-        eyes = eye_cascade.detectMultiScale(roi_gray, 1.1, 10, minSize=(30,30))
+        face_roi_gray = gray[y:y+h, x:x+w]
+        face_roi_color = frame[y:y+h, x:x+w]
+        
+        # Detecta ojos dentro del rostro
+        eyes = eye_cascade.detectMultiScale(face_roi_gray, 1.1, 10, minSize=(30,30))
         for (ex, ey, ew, eh) in eyes:
-            # Dibuja rectángulo de ojo
-            cv2.rectangle(roi_color, (ex, ey), (ex+ew, ey+eh), (0,255,0), 2)
-
-            eye_gray = roi_gray[ey:ey+eh, ex:ex+ew]
-            eye_color= roi_color[ey:ey+eh, ex:ex+ew]
-
-            # Difumina para reducir ruido
-            eye_gray = cv2.GaussianBlur(eye_gray, (5,5), 0)
-
-            # === Detectar círculo del iris con HoughCircles ===
-            # Ajusta param1, param2, minRadius, maxRadius
-            circles = cv2.HoughCircles(eye_gray, 
-                                       cv2.HOUGH_GRADIENT, 
-                                       dp=1.2, 
-                                       minDist=ew//4,
-                                       param1=80,  # umbral para canny
-                                       param2=20,  # umbral para acumulador
-                                       minRadius=ew//8,
-                                       maxRadius=ew//2)
-
+            # Dibuja el rectángulo del ojo (opcional)
+            cv2.rectangle(face_roi_color, (ex, ey), (ex+ew, ey+eh), (0,255,0), 2)
+            
+            # Recortar una subregión del ojo que se espera contenga el iris
+            # Se descarta la parte superior (posible ceja) y se toma la zona central-inferior.
+            iris_x1 = int(ew * 0.25)
+            iris_x2 = int(ew * 0.75)
+            iris_y1 = int(eh * 0.4)
+            iris_y2 = int(eh * 0.8)
+            if iris_y2 - iris_y1 <= 0 or iris_x2 - iris_x1 <= 0:
+                continue  # Evita recortes no válidos
+            iris_roi_gray = face_roi_gray[ey+iris_y1:ey+iris_y2, ex+iris_x1:ex+iris_x2]
+            iris_roi_color = face_roi_color[ey+iris_y1:ey+iris_y2, ex+iris_x1:ex+iris_x2]
+            
+            # Suaviza la imagen para reducir ruido
+            iris_gray_blurred = cv2.GaussianBlur(iris_roi_gray, (5,5), 0)
+            
+            # Detecta el círculo del iris con HoughCircles sobre la subregión
+            circles = cv2.HoughCircles(iris_gray_blurred,
+                                       cv2.HOUGH_GRADIENT,
+                                       dp=1.2,
+                                       minDist=iris_roi_gray.shape[1]//4,
+                                       param1=80,
+                                       param2=15,   # Ajusta este parámetro según calidad
+                                       minRadius=int(iris_roi_gray.shape[1]*0.1),
+                                       maxRadius=int(iris_roi_gray.shape[1]*0.5))
             if circles is not None:
                 circles = np.uint16(np.around(circles))
-                # Toma la primera (o la más grande si prefieres)
-                # Aquí tomamos la primera
-                x_c, y_c, r_c = circles[0][0]
-
-                # Dibuja el círculo en la imagen de depuración
-                cv2.circle(eye_color, (x_c, y_c), r_c, (0, 255, 255), 2)
-
-                # Crea máscara circular para el iris
-                iris_mask = np.zeros_like(eye_gray, dtype=np.uint8)
-                cv2.circle(iris_mask, (x_c, y_c), r_c, 255, -1)
-
-                # === Aplica Sobel solo dentro del círculo ===
-                sobelx = cv2.Sobel(eye_gray, cv2.CV_64F, 1, 0, ksize=3)
-                sobely = cv2.Sobel(eye_gray, cv2.CV_64F, 0, 1, ksize=3)
-                sobel  = cv2.magnitude(sobelx, sobely)
-                sobel  = np.uint8(np.clip(sobel, 0, 255))
-
-                # Filtra sobel con la máscara del iris
-                sobel_masked = cv2.bitwise_and(sobel, sobel, mask=iris_mask)
-
-                # Threshold
-                _, thresh = cv2.threshold(sobel_masked, 30, 255, cv2.THRESH_BINARY)
-
-                # Busca contornos en la parte sobel del iris
-                conts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                if conts:
-                    cnt = max(conts, key=cv2.contourArea)
-                    area = cv2.contourArea(cnt)
-                    if area > 30:
-                        cv2.drawContours(eye_color, [cnt], -1, (0,0,255), 2)
-
-                        # Crea una máscara a partir del contorno
-                        cont_mask = np.zeros_like(iris_mask)
-                        cv2.drawContours(cont_mask, [cnt], -1, 255, -1)
-
-                        # Color promedio
-                        mean_bgr = cv2.mean(eye_color, mask=cont_mask)
-                        b,g,r = mean_bgr[:3]
-
-                        # Clasifica color
-                        color_iris = classify_iris_color((b,g,r))
-                        cv2.putText(frame, color_iris,
-                                    (x+ex, y+ey-5),
-                                    cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.6, (0,255,255),2)
-            else:
-                # Si no hay círculo, tal vez fallback
-                pass
-
-    cv2.imshow("Deteccion Ojos - HoughCircles", frame)
+                # Tomamos la primera circunferencia detectada
+                cx, cy, radius = circles[0][0]
+                # Convertir las coordenadas del subrecorte a las coordenadas originales del rostro
+                circle_center_x = ex + iris_x1 + cx
+                circle_center_y = ey + iris_y1 + cy
+                cv2.circle(face_roi_color, (circle_center_x, circle_center_y), radius, (0,255,255), 2)
+                
+                # Crea una máscara circular en la subregión
+                iris_mask = np.zeros_like(iris_roi_gray, dtype=np.uint8)
+                cv2.circle(iris_mask, (cx, cy), radius, 255, -1)
+                
+                # Calcula el color promedio en la zona del iris
+                mean_color = cv2.mean(iris_roi_color, mask=iris_mask)[:3]
+                color_name = classify_color(mean_color)
+                # Muestra el nombre del color sobre el rostro
+                cv2.putText(frame, color_name, (x+ex, y+ey-5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,255), 2)
+    
+    cv2.imshow("Deteccion de Iris y Color", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
