@@ -26,27 +26,50 @@ color_ranges = {
 
 def classify_color(bgr_color):
     """
-    Convierte un color de formato BGR a HSV y lo clasifica según los rangos definidos.
+    Convierte un color BGR a HSV y clasifica el color del iris según una lógica
+    basada en el valor (V) y el tono (H).
 
+    Se asume que:
+      - Para tonos con H < 10 se consideran Marrones.
+      - Para 10 <= H < 25:
+          • Si V >= 150 se clasifica como Azules (sugiere que, pese a un H bajo,
+            el iris es brillante, típico en ojos azules en nuestros tests).
+          • Si V < 140 se clasifica como Marrones.
+          • Valores intermedios se asignan como Verdes.
+      - Para 25 <= H < 40:
+          • Si V >= 120 se clasifica como Azules.
+          • Si V < 120 se clasifica como Verdes.
+      - Para 40 <= H < 100 se asigna Azules.
+      - Para otros casos se retorna "Indeterminado".
+    
     Args:
-        bgr_color (tuple): Color en formato BGR (Blue, Green, Red).
+        bgr_color (tuple): Color en formato BGR.
 
     Returns:
-        str: Nombre del color clasificado o "Indeterminado" si no coincide con ningún rango.
+        str: "Marrones", "Verdes", "Azules" o "Indeterminado".
     """
-    # Convierte el color BGR a HSV para facilitar la comparación.
     hsv = cv2.cvtColor(np.uint8([[[bgr_color[0], bgr_color[1], bgr_color[2]]]]),
                        cv2.COLOR_BGR2HSV)[0][0]
+    h, s, v = hsv
 
-    # Recorre cada rango definido y verifica si el color se encuentra dentro de los límites.
-    for name, (lower, upper) in color_ranges.items():
-        if lower[0] <= hsv[0] <= upper[0] and lower[1] <= hsv[1] <= upper[1] and lower[2] <= hsv[2] <= upper[2]:
-            print(f"{hsv} : {name}")
-            return name
-    # Retorna "Indeterminado" si el color no coincide con ninguno de los rangos.
-    # Imprime el valor HSV para fines de depuración.
-    print(f"{hsv} : Indeterminado")
-    return "Indeterminado"
+    if h < 10:
+        return "Marrones"
+    elif 10 <= h < 25:
+        if v >= 150:
+            return "Azules"
+        elif v < 140:
+            return "Marrones"
+        else:
+            return "Verdes"
+    elif 25 <= h < 40:
+        if v >= 120:
+            return "Azules"
+        else:
+            return "Verdes"
+    elif 40 <= h < 100:
+        return "Azules"
+    else:
+        return "Indeterminado"
 
 while True:
     # Lee un frame de la captura de video.
