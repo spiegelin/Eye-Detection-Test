@@ -52,21 +52,31 @@ def classify_color(bgr_color):
                        cv2.COLOR_BGR2HSV)[0][0]
     h, s, v = hsv
 
+    if 47 <= s <= 83:
+        print(f"{hsv}: Verdes")
+        return "Verdes"
     if h < 10:
+        print(f"{hsv}: Marrones")
         return "Marrones"
     elif 10 <= h < 25:
         if v >= 150:
+            print(f"{hsv}: Azules")
             return "Azules"
         elif v < 140:
+            print(f"{hsv}: Marrones")
             return "Marrones"
         else:
+            print(f"{hsv}: Verdes")
             return "Verdes"
     elif 25 <= h < 40:
         if v >= 120:
+            print(f"{hsv}: Azules")
             return "Azules"
         else:
+            print(f"{hsv}: Verdes")
             return "Verdes"
     elif 40 <= h < 100:
+        print(f"{hsv}: Azules")
         return "Azules"
     else:
         return "Indeterminado"
