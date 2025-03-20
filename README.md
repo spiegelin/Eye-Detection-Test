@@ -1,92 +1,78 @@
-# Iris Detection and Color Classification
+# 📷 Detección de Rostros y Clasificación de Color de Iris en Tiempo Real
 
-This project uses Python and OpenCV to capture live video, detect faces and eyes in real-time, and identify the iris within each detected eye. It then analyzes the iris using various image processing techniques to determine its color. This can serve as a starting point for biometric analysis or interactive eye-based systems.
+Este proyecto utiliza Python y OpenCV para detectar rostros, ojos y clasificar el color del iris en tiempo real desde la cámara. El código implementa la detección de rostros y ojos utilizando clasificadores Haar, y luego clasifica el color del iris en "Marrones", "Verdes", "Azules" o "Indeterminado" basado en el espacio de color HSV.
 
-## Features
-
-- **Real-Time Video Capture**: Connects to a specified camera.
-- **Face & Eye Detection**: Uses Haar Cascade classifiers to locate faces and eyes.
-- **Iris Detection**: Employs the Hough Circle Transform to detect the iris within an eye.
-- **Edge Detection & Analysis**: Applies the Sobel filter to extract edges and refine iris boundaries.
-- **Color Classification**: Converts BGR to HSV to compare with defined HSV ranges and classify iris color.
-
-## Prerequisites
+## 🚀 Requisitos
 
 - Python 3.x
-- OpenCV (`cv2`)
+- OpenCV
 - NumPy
 
-Install dependencies with:
+## 🛠️ Instrucciones de Instalación
+
+Sigue estos pasos para configurar el entorno virtual y las dependencias necesarias:
+
+### 1. Crear un entorno virtual
+Abre tu terminal o línea de comandos y navega a la carpeta donde quieres clonar el repositorio. Luego, ejecuta el siguiente comando para crear un entorno virtual:
+
+```bash
+python -m venv venv
+```
+
+### 2. Activar el entorno virtual
+- **En Windows**:
+  ```bash
+  .\venv\Scripts\activate
+  ```
+- **En macOS/Linux**:
+  ```bash
+  source venv/bin/activate
+  ```
+
+### 3. Instalar las dependencias
+Con el entorno virtual activado, instala las bibliotecas necesarias:
 
 ```bash
 pip install opencv-python numpy
 ```
 
-## How It Works
+### 4. Descarga los clasificadores Haar
+Este proyecto utiliza clasificadores Haar preentrenados para la detección de rostros y ojos. Asegúrate de descargar los archivos necesarios desde los siguientes enlaces y guardarlos en el directorio del proyecto:
 
-### 1. Video Capture Initialization
-- **Camera Setup**: The script starts by opening a video stream from a specified camera (e.g., `cv2.VideoCapture(1)`). If the camera cannot be accessed, the program exits.
+- [haarcascade_frontalface_default.xml](https://github.com/opencv/opencv/tree/master/data/haarcascades)
+- [haarcascade_eye.xml](https://github.com/opencv/opencv/tree/master/data/haarcascades)
 
-### 2. Loading Haar Cascade Classifiers
-- **Face Detection**: Loads the `haarcascade_frontalface_default.xml` to detect faces.
-- **Eye Detection**: Loads the `haarcascade_eye.xml` to detect eyes.
-- The program checks if these classifiers are loaded correctly before proceeding.
+Coloca estos archivos en la misma carpeta que tu script.
 
-### 3. HSV Color Range Definition
-- A dictionary of HSV ranges is defined to classify iris colors into categories such as Brown, Hazel, Green, Blue, and Grey.
-- These ranges are used later to compare the average color of the iris.
+### 5. Ejecutar el código
+Con el entorno virtual activado y las dependencias instaladas, ejecuta el script:
 
-### 4. Color Classification Functions
-- **`classify_color(bgr_color)`**: Converts a given BGR color to HSV and checks which predefined HSV range it falls into.
-- **`classify_iris_color(bgr_color)`**: Applies specific HSV thresholds to classify the iris as green, brown, or blue.
+```bash
+python nombre_del_script.py
+```
 
-### 5. Processing Each Video Frame
-- **Frame Capture**: Reads the video frame-by-frame.
-- **Grayscale Conversion**: Converts each frame to grayscale, which simplifies face and eye detection.
+Esto abrirá la cámara de tu dispositivo y comenzará la detección de rostros y ojos, mientras clasifica el color del iris en tiempo real. Para salir, presiona la tecla `q`.
 
-### 6. Face and Eye Detection
-- **Face Detection**: Uses the face cascade to locate faces in the grayscale image.
-- **ROI Extraction**: For each detected face, extracts a region of interest (ROI) from both the grayscale and color frames.
-- **Eye Detection**: Within the face ROI, the eye cascade detects eyes and draws a rectangle around each detected eye.
+## 🧑‍💻 Funcionalidad
 
-### 7. Iris Detection Using HoughCircles
-- **Preprocessing**: Applies a Gaussian Blur to the eye region to reduce noise.
-- **Hough Circle Transform**: Detects circles in the blurred eye image, which is expected to correspond to the iris.
-- If a circle is detected, it is drawn on the image.
+- **Detección de Rostros y Ojos**: Utiliza clasificadores Haar para detectar rostros y ojos en tiempo real desde la cámara.
+- **Clasificación del Color del Iris**: Después de detectar el ojo, el programa extrae el iris y lo clasifica como marrón, verde o azul, basándose en el valor promedio del color en el espacio HSV.
+- **Interfaz Visual**: Muestra la cámara en vivo con rectángulos alrededor de los rostros y ojos detectados, y el nombre del color del iris sobre el rostro.
 
-### 8. Iris Analysis with Edge Detection
-- **Mask Creation**: A circular mask is created based on the detected iris circle to isolate the iris region.
-- **Sobel Filter**: Applies the Sobel filter (both x and y directions) to the iris region to detect edges.
-- **Thresholding**: Converts the Sobel result into a binary image to highlight significant edges.
-- **Contour Detection**: Finds the largest contour within the thresholded image, which likely corresponds to the iris boundary.
+## ⚙️ Descripción del Código
 
-### 9. Color Averaging and Iris Color Classification
-- **Color Averaging**: Computes the average BGR color inside the detected iris contour.
-- **Classification**: The average color is then processed (converted to HSV) and classified into one of the predefined iris color categories.
-- **Display**: The determined iris color is overlaid as text on the frame.
+1. **Captura de Video**: El script usa `cv2.VideoCapture` para acceder a la cámara del sistema y capturar frames en tiempo real.
+2. **Clasificadores Haar**: Se cargan los clasificadores para detectar rostros y ojos.
+3. **Función `classify_color`**: Convierte el color del iris de BGR a HSV y lo clasifica basado en el tono (H) y valor (V) del color.
+4. **Detección de Iris**: Después de detectar los ojos, el código aplica la Transformación de Hough para identificar círculos, que corresponden al iris.
+5. **Visualización**: Se dibujan rectángulos alrededor de los rostros y ojos, y se muestra el color clasificado sobre el rostro.
 
-### 10. Display and Cleanup
-- **Output Window**: Displays the processed frame with annotations (rectangles, circles, text).
-- **Termination**: The program continues processing until the user presses the 'q' key, after which it releases the camera and closes all windows.
+## 💡 Mejoras Futuras
 
-## Filters Used
+- Mejorar la precisión de la detección en condiciones de baja luz.
+- Implementar un sistema de clasificación de colores más avanzado para el iris.
+- Agregar soporte para otros tipos de clasificación facial (como emociones).
 
-- **Gaussian Blur**: Reduces noise in the eye region before edge detection.
-- **Sobel Filter**: Computes the gradient magnitude in both x and y directions to detect edges within the iris.
-- **Thresholding**: Converts the Sobel output to a binary image, making contour detection more effective.
+## 📝 Licencia
 
-## Running the Code
-
-1. Ensure you have the required dependencies installed.
-2. Place the Haar cascade XML files (`haarcascade_frontalface_default.xml` and `haarcascade_eye.xml`) in the same directory as the script or update the paths accordingly.
-3. Run the script using:
-
-    ```bash
-    python detection.py
-    ```
-
-Press 'q' to exit the video stream.
-
-## License
-
-This project is licensed under the MIT License.
+Este proyecto está bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
